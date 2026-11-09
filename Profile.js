@@ -9,14 +9,12 @@ import {
   TextField,
 } from "@material-ui/core";
 import axios from "axios";
-import ChipInput from "material-ui-chip-input";
-import FileUploadInput from "../lib/FileUploadInput";
-import DescriptionIcon from "@material-ui/icons/Description";
-import FaceIcon from "@material-ui/icons/Face";
+import PhoneInput from "react-phone-input-2";
+import "react-phone-input-2/lib/material.css";
 
-import { SetPopupContext } from "../App";
+import { SetPopupContext } from "../../App";
 
-import apiList from "../lib/apiList";
+import apiList from "../../lib/apiList";
 
 const useStyles = makeStyles((theme) => ({
   body: {
@@ -31,99 +29,17 @@ const useStyles = makeStyles((theme) => ({
   },
 }));
 
-const MultifieldInput = (props) => {
-  const classes = useStyles();
-  const { education, setEducation } = props;
-
-  return (
-    <>
-      {education.map((obj, key) => (
-        <Grid item container className={classes.inputBox} key={key}>
-          <Grid item xs={6}>
-            <TextField
-              label={`Institution Name #${key + 1}`}
-              value={education[key].institutionName}
-              onChange={(event) => {
-                const newEdu = [...education];
-                newEdu[key].institutionName = event.target.value;
-                setEducation(newEdu);
-              }}
-              variant="outlined"
-              fullWidth
-            />
-          </Grid>
-          <Grid item xs={3}>
-            <TextField
-              label="Start Year"
-              value={obj.startYear}
-              variant="outlined"
-              type="number"
-              onChange={(event) => {
-                const newEdu = [...education];
-                newEdu[key].startYear = event.target.value;
-                setEducation(newEdu);
-              }}
-            />
-          </Grid>
-          <Grid item xs={3}>
-            <TextField
-              label="End Year"
-              value={obj.endYear}
-              variant="outlined"
-              type="number"
-              onChange={(event) => {
-                const newEdu = [...education];
-                newEdu[key].endYear = event.target.value;
-                setEducation(newEdu);
-              }}
-            />
-          </Grid>
-        </Grid>
-      ))}
-      <Grid item style={{ alignSelf: "center" }}>
-        <Button
-          variant="contained"
-          color="secondary"
-          onClick={() =>
-            setEducation([
-              ...education,
-              {
-                institutionName: "",
-                startYear: "",
-                endYear: "",
-              },
-            ])
-          }
-          className={classes.inputBox}
-        >
-          Add another institution details
-        </Button>
-      </Grid>
-    </>
-  );
-};
-
 const Profile = (props) => {
   const classes = useStyles();
   const setPopup = useContext(SetPopupContext);
-  const [userData, setUserData] = useState();
-  const [open, setOpen] = useState(false);
 
   const [profileDetails, setProfileDetails] = useState({
     name: "",
-    education: [],
-    skills: [],
-    resume: "",
-    profile: "",
+    bio: "",
+    contactNumber: "",
   });
 
-  const [education, setEducation] = useState([
-    {
-      institutionName: "",
-      startYear: "",
-      endYear: "",
-    },
-  ]);
+  const [phone, setPhone] = useState("");
 
   const handleInput = (key, value) => {
     setProfileDetails({
@@ -146,15 +62,7 @@ const Profile = (props) => {
       .then((response) => {
         console.log(response.data);
         setProfileDetails(response.data);
-        if (response.data.education.length > 0) {
-          setEducation(
-            response.data.education.map((edu) => ({
-              institutionName: edu.institutionName ? edu.institutionName : "",
-              startYear: edu.startYear ? edu.startYear : "",
-              endYear: edu.endYear ? edu.endYear : "",
-            }))
-          );
-        }
+        setPhone(response.data.contactNumber);
       })
       .catch((err) => {
         console.log(err.response.data);
@@ -166,28 +74,21 @@ const Profile = (props) => {
       });
   };
 
-  const handleClose = () => {
-    setOpen(false);
-  };
-
-  const editDetails = () => {
-    setOpen(true);
-  };
-
   const handleUpdate = () => {
-    console.log(education);
-
     let updatedDetails = {
       ...profileDetails,
-      education: education
-        .filter((obj) => obj.institutionName.trim() !== "")
-        .map((obj) => {
-          if (obj["endYear"] === "") {
-            delete obj["endYear"];
-          }
-          return obj;
-        }),
     };
+    if (phone !== "") {
+      updatedDetails = {
+        ...profileDetails,
+        contactNumber: `+${phone}`,
+      };
+    } else {
+      updatedDetails = {
+        ...profileDetails,
+        contactNumber: "",
+      };
+    }
 
     axios
       .put(apiList.user, updatedDetails, {
@@ -211,7 +112,6 @@ const Profile = (props) => {
         });
         console.log(err.response);
       });
-    setOpen(false);
   };
 
   return (
@@ -226,7 +126,7 @@ const Profile = (props) => {
         <Grid item>
           <Typography variant="h2">Profile</Typography>
         </Grid>
-        <Grid item xs>
+        <Grid item xs style={{ width: "100%" }}>
           <Paper
             style={{
               padding: "20px",
@@ -235,6 +135,7 @@ const Profile = (props) => {
               flexDirection: "column",
               justifyContent: "center",
               alignItems: "center",
+              //   width: "60%",
             }}
           >
             <Grid container direction="column" alignItems="stretch" spacing={3}>
@@ -246,54 +147,40 @@ const Profile = (props) => {
                   className={classes.inputBox}
                   variant="outlined"
                   fullWidth
+                  style={{ width: "100%" }}
                 />
               </Grid>
-              <MultifieldInput
-                education={education}
-                setEducation={setEducation}
-              />
               <Grid item>
-                <ChipInput
-                  className={classes.inputBox}
-                  label="Skills"
+                <TextField
+                  label="Bio (upto 250 words)"
+                  multiline
+                  rows={8}
+                  style={{ width: "100%" }}
                   variant="outlined"
-                  helperText="Press enter to add skills"
-                  value={profileDetails.skills}
-                  onAdd={(chip) =>
-                    setProfileDetails({
-                      ...profileDetails,
-                      skills: [...profileDetails.skills, chip],
-                    })
-                  }
-                  onDelete={(chip, index) => {
-                    let skills = profileDetails.skills;
-                    skills.splice(index, 1);
-                    setProfileDetails({
-                      ...profileDetails,
-                      skills: skills,
-                    });
+                  value={profileDetails.bio}
+                  onChange={(event) => {
+                    if (
+                      event.target.value.split(" ").filter(function (n) {
+                        return n != "";
+                      }).length <= 250
+                    ) {
+                      handleInput("bio", event.target.value);
+                    }
                   }}
-                  fullWidth
                 />
               </Grid>
-              <Grid item>
-                <FileUploadInput
-                  className={classes.inputBox}
-                  label="Resume (.pdf)"
-                  icon={<DescriptionIcon />}
-                  uploadTo={apiList.uploadResume}
-                  handleInput={handleInput}
-                  identifier={"resume"}
-                />
-              </Grid>
-              <Grid item>
-                <FileUploadInput
-                  className={classes.inputBox}
-                  label="Profile Photo (.jpg/.png)"
-                  icon={<FaceIcon />}
-                  uploadTo={apiList.uploadProfileImage}
-                  handleInput={handleInput}
-                  identifier={"profile"}
+              <Grid
+                item
+                style={{
+                  display: "flex",
+                  justifyContent: "center",
+                }}
+              >
+                <PhoneInput
+                  country={"in"}
+                  value={phone}
+                  onChange={(phone) => setPhone(phone)}
+                  style={{ width: "auto" }}
                 />
               </Grid>
             </Grid>
@@ -308,9 +195,6 @@ const Profile = (props) => {
           </Paper>
         </Grid>
       </Grid>
-      {/* <Modal open={open} onClose={handleClose} className={classes.popupDialog}> */}
-
-      {/* </Modal> */}
     </>
   );
 };
